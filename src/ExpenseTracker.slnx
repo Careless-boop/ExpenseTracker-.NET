@@ -5,4 +5,5 @@
     <Project Path="ExpenseTracker.Domain/ExpenseTracker.Domain.csproj" />
     <Project Path="ExpenseTracker.Infrastructure/ExpenseTracker.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/" />
 </Solution>
