@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Application.Common.Interfaces;
+using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +26,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
         {
             return await _context.ExpenseListMembers
                 .Where(m => m.UserId == _currentUser.UserId)
+                .OrderByDescending(m => m.ExpenseList.CreatedAt)
                 .Select(m => new ExpenseListDto(
                     m.ExpenseList.Id,
                     m.ExpenseList.Name,
@@ -36,7 +37,6 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                     m.Role,
                     m.ExpenseList.CreatedAt
                 ))
-                .OrderByDescending(e => e.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
     }
