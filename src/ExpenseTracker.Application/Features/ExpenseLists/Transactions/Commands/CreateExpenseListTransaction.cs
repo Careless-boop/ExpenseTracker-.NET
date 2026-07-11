@@ -43,6 +43,12 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
                     p.RuleFor(x => x.CustomShareAmount)
                         .GreaterThan(0).When(x => x.CustomShareAmount.HasValue);
                 });
+            RuleFor(x => x.Participants)
+                .Must(p => p == null || p.Select(x => x.MemberId).Distinct().Count() == p.Count)
+                .WithMessage("A member cannot appear twice in the same split.");
+            RuleFor(x => x.Participants)
+                .Must((cmd, participants) => ParticipantSplitRules.SharesReconcile(participants, cmd.Amount))
+                .WithMessage(ParticipantSplitRules.Message);
         }
     }
 

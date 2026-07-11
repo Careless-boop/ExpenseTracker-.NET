@@ -28,6 +28,7 @@ namespace ExpenseTracker.Domain.Entities
         /// <summary>
         /// Calculate each participant's share keyed by MemberId.
         /// Handles equal splits, custom amounts, and mixed scenarios with proper remainder distribution.
+        /// Shares always sum to exactly <see cref="Amount"/>.
         /// </summary>
         public IReadOnlyDictionary<Guid, decimal> CalculateShares()
         {
@@ -35,7 +36,11 @@ namespace ExpenseTracker.Domain.Entities
                 return new Dictionary<Guid, decimal>();
 
             var shares = new Dictionary<Guid, decimal>();
-            var participantsList = Participants.ToList();
+
+            // Ordered by MemberId because the rounding remainder lands on the first participant.
+            // EF loads Participants in no guaranteed order, so without this the member who absorbs
+            // the odd cent could change between two reads of an unchanged transaction.
+            var participantsList = Participants.OrderBy(p => p.MemberId).ToList();
 
             var customParticipants = participantsList.Where(p => p.CustomShareAmount.HasValue).ToList();
             var equalParticipants = participantsList.Where(p => !p.CustomShareAmount.HasValue).ToList();
@@ -44,6 +49,12 @@ namespace ExpenseTracker.Domain.Entities
             {
                 foreach (var p in customParticipants)
                     shares[p.MemberId] = p.CustomShareAmount!.Value;
+
+                // Validators reject custom shares that don't sum to Amount, but rows predating them
+                // may. Balances must still conserve, so any residual lands on the first participant.
+                var residual = Amount - customParticipants.Sum(p => p.CustomShareAmount!.Value);
+                if (residual != 0)
+                    shares[customParticipants[0].MemberId] += residual;
             }
             else if (customParticipants.Count == 0)
             {
@@ -65,7 +76,7 @@ namespace ExpenseTracker.Domain.Entities
                 foreach (var p in customParticipants)
                     shares[p.MemberId] = p.CustomShareAmount!.Value;
 
-                if (remainingAmount > 0 && equalParticipants.Count > 0)
+                if (remainingAmount > 0)
                 {
                     var equalShare = Math.Round(remainingAmount / equalParticipants.Count, 2, MidpointRounding.ToNegativeInfinity);
                     var remainder = remainingAmount - equalShare * equalParticipants.Count;
@@ -77,10 +88,14 @@ namespace ExpenseTracker.Domain.Entities
                         isFirst = false;
                     }
                 }
-                else if (remainingAmount <= 0)
+                else
                 {
                     foreach (var p in equalParticipants)
                         shares[p.MemberId] = 0;
+
+                    // Custom shares over-allocate; push the overshoot back onto the first of them.
+                    if (remainingAmount < 0)
+                        shares[customParticipants[0].MemberId] += remainingAmount;
                 }
             }
 
