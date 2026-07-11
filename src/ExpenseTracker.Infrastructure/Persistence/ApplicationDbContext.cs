@@ -4,6 +4,7 @@ using ExpenseTracker.Infrastructure.Identity;
 using ExpenseTracker.Infrastructure.Persistence.Interceptors;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System.Reflection;
 
 namespace ExpenseTracker.Infrastructure.Persistence
@@ -31,8 +32,12 @@ namespace ExpenseTracker.Infrastructure.Persistence
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            base.OnConfiguring(optionsBuilder);
             optionsBuilder.AddInterceptors(_auditableInterceptor);
         }
+
+        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
+            Database.BeginTransactionAsync(cancellationToken);
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

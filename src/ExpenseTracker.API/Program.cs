@@ -1,10 +1,16 @@
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
+using ExpenseTracker.API;
 using ExpenseTracker.API.Middleware;
 using ExpenseTracker.API.Services;
 using ExpenseTracker.Application;
 using ExpenseTracker.Domain.Interfaces;
 using ExpenseTracker.Infrastructure;
+using ExpenseTracker.Infrastructure.Identity;
+using ExpenseTracker.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -16,6 +22,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+var jwtSettings = JwtSettings.Load(builder.Configuration);
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -25,15 +33,47 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+                Encoding.UTF8.GetBytes(jwtSettings.Key)),
             ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
+
+// Auth endpoints are unauthenticated and guessable, so they get a tighter bucket keyed by IP.
+// Identity lockout backs this up per-account.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy(RateLimitPolicies.Auth, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 300,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -101,9 +141,15 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
 
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();
+
+// Exposed for WebApplicationFactory<Program> in the integration tests.
+public partial class Program;

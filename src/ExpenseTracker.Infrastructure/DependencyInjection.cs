@@ -16,11 +16,19 @@ namespace ExpenseTracker.Infrastructure
             this IServiceCollection services,
             IConfiguration configuration)
         {
+            services.AddSingleton(JwtSettings.Load(configuration));
+
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException(
+                    "ConnectionStrings:DefaultConnection is not configured. Set it with " +
+                    "`dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<value>\"` for local " +
+                    "development, or the ConnectionStrings__DefaultConnection environment variable when deploying.");
+
             services.AddScoped<AuditableEntityInterceptor>();
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
-                    configuration.GetConnectionString("DefaultConnection"),
+                    connectionString,
                     b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
             services.AddScoped<IApplicationDbContext>(provider =>
@@ -34,6 +42,10 @@ namespace ExpenseTracker.Infrastructure
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequiredLength = 8;
                 options.User.RequireUniqueEmail = true;
+
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();

@@ -6,7 +6,6 @@ using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Application.Common.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ExpenseTracker.Infrastructure.Identity
@@ -14,16 +13,16 @@ namespace ExpenseTracker.Infrastructure.Identity
     public class IdentityService : IIdentityService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IConfiguration _configuration;
+        private readonly JwtSettings _jwtSettings;
         private readonly IDefaultCategoryService _defaultCategoryService;
 
         public IdentityService(
             UserManager<ApplicationUser> userManager,
-            IConfiguration configuration,
+            JwtSettings jwtSettings,
             IDefaultCategoryService defaultCategoryService)
         {
             _userManager = userManager;
-            _configuration = configuration;
+            _jwtSettings = jwtSettings;
             _defaultCategoryService = defaultCategoryService;
         }
 
@@ -99,27 +98,33 @@ namespace ExpenseTracker.Infrastructure.Identity
 
         public async Task<Result<AuthResult>> AuthenticateAsync(string email, string password)
         {
+            // Identical text on every failure path, so responses can't be used to enumerate emails.
+            const string invalidCredentials = "Invalid email or password";
+
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
             {
-                return Result<AuthResult>.Failure("Invalid email or password");
+                return Result<AuthResult>.Failure(invalidCredentials);
             }
 
-            var isValid = await _userManager.CheckPasswordAsync(user, password);
-            if (!isValid)
+            if (await _userManager.IsLockedOutAsync(user))
             {
-                return Result<AuthResult>.Failure("Invalid email or password");
+                return Result<AuthResult>.Failure(
+                    "This account is temporarily locked due to repeated failed sign-in attempts. Try again later.");
             }
+
+            // CheckPasswordAsync does not touch the lockout counters, so they're driven by hand.
+            if (!await _userManager.CheckPasswordAsync(user, password))
+            {
+                await _userManager.AccessFailedAsync(user);
+                return Result<AuthResult>.Failure(invalidCredentials);
+            }
+
+            await _userManager.ResetAccessFailedCountAsync(user);
 
             user.LastLoginAt = DateTime.UtcNow;
 
-            var tokens = await GenerateTokensAsync(user);
-
-            user.RefreshToken = tokens.RefreshToken;
-            user.RefreshTokenExpiryTime = tokens.ExpiresAt.AddDays(
-                int.Parse(_configuration["Jwt:RefreshTokenExpiryInDays"] ?? "7"));
-
-            await _userManager.UpdateAsync(user);
+            var tokens = await IssueTokensAsync(user);
 
             return Result<AuthResult>.Success(new AuthResult(
                 tokens.AccessToken,
@@ -131,21 +136,18 @@ namespace ExpenseTracker.Infrastructure.Identity
 
         public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken)
         {
+            var hash = HashRefreshToken(refreshToken);
+
             var user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+                .FirstOrDefaultAsync(u => u.RefreshTokenHash == hash);
 
             if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
                 return Result<AuthResult>.Failure("Invalid or expired refresh token");
             }
 
-            var tokens = await GenerateTokensAsync(user);
-
-            user.RefreshToken = tokens.RefreshToken;
-            user.RefreshTokenExpiryTime = tokens.ExpiresAt.AddDays(
-                int.Parse(_configuration["Jwt:RefreshTokenExpiryInDays"] ?? "7"));
-
-            await _userManager.UpdateAsync(user);
+            // Rotated on use: the presented token is single-use.
+            var tokens = await IssueTokensAsync(user);
 
             return Result<AuthResult>.Success(new AuthResult(
                 tokens.AccessToken,
@@ -160,11 +162,28 @@ namespace ExpenseTracker.Infrastructure.Identity
             var user = await _userManager.FindByIdAsync(userId);
             if (user != null)
             {
-                user.RefreshToken = null;
+                user.RefreshTokenHash = null;
                 user.RefreshTokenExpiryTime = null;
                 await _userManager.UpdateAsync(user);
             }
         }
+
+        /// <summary>Issues a token pair, persisting only the hash of the refresh token.</summary>
+        private async Task<(string AccessToken, string RefreshToken, DateTime ExpiresAt)> IssueTokensAsync(
+            ApplicationUser user)
+        {
+            var tokens = await GenerateTokensAsync(user);
+
+            user.RefreshTokenHash = HashRefreshToken(tokens.RefreshToken);
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryInDays);
+
+            await _userManager.UpdateAsync(user);
+
+            return tokens;
+        }
+
+        private static string HashRefreshToken(string refreshToken) =>
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken)));
 
         private async Task<(string AccessToken, string RefreshToken, DateTime ExpiresAt)> GenerateTokensAsync(
             ApplicationUser user)
@@ -180,15 +199,14 @@ namespace ExpenseTracker.Infrastructure.Identity
             var roles = await _userManager.GetRolesAsync(user);
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var expiryMinutes = int.Parse(_configuration["Jwt:ExpiryInMinutes"] ?? "60");
-            var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+            var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryInMinutes);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: _jwtSettings.Issuer,
+                audience: _jwtSettings.Audience,
                 claims: claims,
                 expires: expiresAt,
                 signingCredentials: credentials

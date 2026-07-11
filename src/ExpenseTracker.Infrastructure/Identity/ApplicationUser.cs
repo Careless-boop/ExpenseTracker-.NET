@@ -10,7 +10,8 @@ namespace ExpenseTracker.Infrastructure.Identity
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }
 
-        public string? RefreshToken { get; set; }
+        /// <summary>SHA-256 of the issued refresh token, hex-encoded. The raw token is never stored.</summary>
+        public string? RefreshTokenHash { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
 
         public ICollection<PersonalTransaction> PersonalTransactions { get; set; } = new List<PersonalTransaction>();

@@ -3,11 +3,13 @@ using ExpenseTracker.Application.Common.Models;
 using ExpenseTracker.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ExpenseTracker.API.Controllers
 {
     [ApiController]
     [Route("api/v1/auth")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     public class AuthController : ControllerBase
     {
         private readonly IIdentityService _identityService;

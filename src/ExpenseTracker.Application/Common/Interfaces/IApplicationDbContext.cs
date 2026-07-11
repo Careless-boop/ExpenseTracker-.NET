@@ -1,5 +1,6 @@
 using ExpenseTracker.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ExpenseTracker.Application.Common.Interfaces
 {
@@ -15,5 +16,7 @@ namespace ExpenseTracker.Application.Common.Interfaces
         DbSet<Settlement> Settlements { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+        Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
     }
 }

@@ -36,10 +36,12 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(m => m.ExpenseListId);
             builder.HasIndex(m => m.UserId);
-            // Unique: one real-user membership per list (mock members have null UserId so they don't conflict)
+            // One real-user membership per list. Mock members have a null UserId so they don't
+            // conflict. IsDeleted must be in the filter: removals are soft, so the tombstone row
+            // still carries the UserId and would collide on re-add or on a mock-member merge.
             builder.HasIndex(m => new { m.ExpenseListId, m.UserId })
                 .IsUnique()
-                .HasFilter("[UserId] IS NOT NULL");
+                .HasFilter("[UserId] IS NOT NULL AND [IsDeleted] = 0");
         }
     }
 }

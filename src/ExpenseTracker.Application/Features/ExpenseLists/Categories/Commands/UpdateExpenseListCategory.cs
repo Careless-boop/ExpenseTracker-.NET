@@ -53,10 +53,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Categories.Commands
             if (category == null)
                 throw new NotFoundException(nameof(ExpenseListCategory), request.Id);
 
-            if (category.IsDefault)
-                throw new ValidationException([new ValidationFailure(
-                    nameof(request.Id), "Cannot rename the default category")]);
-
+            // Authorize before the IsDefault check, so a non-member cannot probe category ids.
             var membership = await _context.ExpenseListMembers
                 .FirstOrDefaultAsync(m =>
                     m.ExpenseListId == category.ExpenseListId &&
@@ -65,6 +62,10 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Categories.Commands
 
             if (membership == null || !membership.CanEdit)
                 throw new ForbiddenException("You need Editor or Owner role to manage categories.");
+
+            if (category.IsDefault)
+                throw new ValidationException([new ValidationFailure(
+                    nameof(request.Id), "Cannot rename the default category")]);
 
             category.Name = request.Name;
             category.Icon = request.Icon;
