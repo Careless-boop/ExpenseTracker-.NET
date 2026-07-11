@@ -33,7 +33,8 @@ namespace ExpenseTracker.API.Controllers
         }
 
         /// <summary>
-        /// Create a settlement (current user marks that they paid ToMemberId)
+        /// Create a settlement. Defaults to "I paid ToMemberId"; Editors/Owners may pass
+        /// FromMemberId to record a payment made by a mock member.
         /// </summary>
         [HttpPost]
         public async Task<ActionResult<Guid>> CreateSettlement(
@@ -44,7 +45,8 @@ namespace ExpenseTracker.API.Controllers
                 expenseListId,
                 request.ToMemberId,
                 request.Amount,
-                request.Note));
+                request.Note,
+                request.FromMemberId));
 
             return Created($"/api/v1/expense-lists/{expenseListId}/settlements/{id}", new { id });
         }
@@ -60,5 +62,9 @@ namespace ExpenseTracker.API.Controllers
         }
     }
 
-    public record CreateSettlementRequest(Guid ToMemberId, decimal Amount, string? Note = null);
+    public record CreateSettlementRequest(
+        Guid ToMemberId,
+        decimal Amount,
+        string? Note = null,
+        Guid? FromMemberId = null);
 }

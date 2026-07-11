@@ -110,7 +110,20 @@ namespace ExpenseTracker.API.Controllers
         }
 
         /// <summary>
-        /// Claim a mock member slot (current user takes over that placeholder)
+        /// Rename a mock member placeholder (Editor/Owner)
+        /// </summary>
+        [HttpPut("{id:guid}/mock-members/{memberId:guid}")]
+        public async Task<IActionResult> UpdateMockMember(
+            Guid id,
+            Guid memberId,
+            [FromBody] AddMockMemberRequest request)
+        {
+            await _mediator.Send(new UpdateMockExpenseListMemberCommand(id, memberId, request.DisplayName));
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Claim a mock member slot: fold your membership into that placeholder (members only)
         /// </summary>
         [HttpPost("{id:guid}/claim/{mockMemberId:guid}")]
         public async Task<IActionResult> ClaimMockMember(Guid id, Guid mockMemberId)

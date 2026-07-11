@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Application.Common.Exceptions;
+using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Domain.Interfaces;
@@ -7,14 +7,21 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 using ValidationException = ExpenseTracker.Application.Common.Exceptions.ValidationException;
+using ValidationFailure = FluentValidation.Results.ValidationFailure;
 
 namespace ExpenseTracker.Application.Features.Settlements.Commands
 {
+    /// <summary>
+    /// Records that FromMemberId paid ToMemberId. FromMemberId defaults to the caller; supplying a
+    /// different one is only allowed for mock members, so a settlement can never be forged in the
+    /// name of another real user.
+    /// </summary>
     public record CreateSettlementCommand(
         Guid ExpenseListId,
         Guid ToMemberId,
         decimal Amount,
-        string? Note = null
+        string? Note = null,
+        Guid? FromMemberId = null
     ) : IRequest<Guid>;
 
     public class CreateSettlementCommandValidator : AbstractValidator<CreateSettlementCommand>
@@ -47,36 +54,49 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
         {
             var currentUserId = _currentUser.UserId!;
 
-            var currentMembership = await _context.ExpenseListMembers
-                .FirstOrDefaultAsync(m =>
-                    m.ExpenseListId == request.ExpenseListId &&
-                    m.UserId == currentUserId,
-                    cancellationToken);
+            var members = await _context.ExpenseListMembers
+                .Where(m => m.ExpenseListId == request.ExpenseListId)
+                .ToListAsync(cancellationToken);
+
+            var currentMembership = members.FirstOrDefault(m => m.UserId == currentUserId);
 
             if (currentMembership == null)
                 throw new NotFoundException(nameof(ExpenseList), request.ExpenseListId);
 
-            var toMember = await _context.ExpenseListMembers
-                .FirstOrDefaultAsync(m =>
-                    m.ExpenseListId == request.ExpenseListId &&
-                    m.Id == request.ToMemberId,
-                    cancellationToken);
+            if (!currentMembership.CanEdit)
+                throw new ForbiddenException("You need Editor or Owner role to record settlements.");
 
-            if (toMember == null)
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure(
-                nameof(request.ToMemberId),
-                "Recipient is not a member of this expense list")]);
+            var fromMemberId = request.FromMemberId ?? currentMembership.Id;
 
-            if (currentMembership.Id == request.ToMemberId)
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure(
-                nameof(request.ToMemberId),
-                "Cannot settle with yourself")]);
+            if (fromMemberId != currentMembership.Id)
+            {
+                var fromMember = members.FirstOrDefault(m => m.Id == fromMemberId);
+
+                if (fromMember == null)
+                    throw new ValidationException([new ValidationFailure(
+                        nameof(request.FromMemberId),
+                        "Payer is not a member of this expense list")]);
+
+                if (!fromMember.IsMock)
+                    throw new ForbiddenException(
+                        "You can only record a settlement on behalf of a placeholder member.");
+            }
+
+            if (members.All(m => m.Id != request.ToMemberId))
+                throw new ValidationException([new ValidationFailure(
+                    nameof(request.ToMemberId),
+                    "Recipient is not a member of this expense list")]);
+
+            if (fromMemberId == request.ToMemberId)
+                throw new ValidationException([new ValidationFailure(
+                    nameof(request.ToMemberId),
+                    "Cannot settle with yourself")]);
 
             var settlement = new Settlement
             {
                 Id = Guid.NewGuid(),
                 ExpenseListId = request.ExpenseListId,
-                FromMemberId = currentMembership.Id,
+                FromMemberId = fromMemberId,
                 ToMemberId = request.ToMemberId,
                 Amount = request.Amount,
                 SettledAt = DateTime.UtcNow,
