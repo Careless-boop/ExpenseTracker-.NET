@@ -93,6 +93,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
                 Id = Guid.NewGuid(),
                 ExpenseListId = request.ExpenseListId,
                 UserId = user.Id,
+                DisplayName = user.DisplayName ?? user.UserName,
+                Email = user.Email,
                 Role = request.Role,
                 JoinedAt = DateTime.UtcNow
             };

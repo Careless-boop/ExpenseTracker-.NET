@@ -14,16 +14,13 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
     {
         private readonly IApplicationDbContext _context;
         private readonly ICurrentUserService _currentUser;
-        private readonly IIdentityService _identityService;
 
         public GetExpenseListByIdQueryHandler(
             IApplicationDbContext context,
-            ICurrentUserService currentUser,
-            IIdentityService identityService)
+            ICurrentUserService currentUser)
         {
             _context = context;
             _currentUser = currentUser;
-            _identityService = identityService;
         }
 
         public async Task<ExpenseListDetailDto> Handle(
@@ -34,7 +31,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                 .Include(m => m.ExpenseList)
                     .ThenInclude(e => e.Members)
                 .Include(m => m.ExpenseList)
-                    .ThenInclude(e => e.Transactions.Where(t => !t.IsDeleted))
+                    .ThenInclude(e => e.Transactions)
                 .FirstOrDefaultAsync(m =>
                     m.ExpenseListId == request.Id &&
                     m.UserId == _currentUser.UserId,
@@ -47,24 +44,18 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
 
             var expenseList = membership.ExpenseList;
 
-            var userIds = expenseList.Members.Select(m => m.UserId);
-            var users = await _identityService.GetUsersByIdsAsync(userIds);
-            var userMap = users.ToDictionary(u => u.Id);
-
             var memberDtos = expenseList.Members
-                .Select(m => {
-                    var user = userMap.GetValueOrDefault(m.UserId);
-                    return new ExpenseListMemberDto(
-                        m.UserId,
-                        user?.DisplayName ?? user?.UserName,
-                        user?.Email,
-                        user?.AvatarUrl,
-                        m.Role,
-                        m.JoinedAt
-                    );
-                })
                 .OrderByDescending(m => m.Role)
                 .ThenBy(m => m.JoinedAt)
+                .Select(m => new ExpenseListMemberDto(
+                    m.Id,
+                    m.DisplayName,
+                    m.UserId,
+                    m.Email,
+                    m.Role,
+                    m.JoinedAt,
+                    m.IsMock
+                ))
                 .ToList();
 
             var totalExpenses = expenseList.Transactions

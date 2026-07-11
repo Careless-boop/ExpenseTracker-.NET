@@ -33,15 +33,18 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
     {
         private readonly IApplicationDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly IIdentityService _identityService;
         private readonly IDefaultCategoryService _defaultCategoryService;
 
         public CreateExpenseListCommandHandler(
             IApplicationDbContext context,
             ICurrentUserService currentUser,
+            IIdentityService identityService,
             IDefaultCategoryService defaultCategoryService)
         {
             _context = context;
             _currentUser = currentUser;
+            _identityService = identityService;
             _defaultCategoryService = defaultCategoryService;
         }
 
@@ -49,6 +52,9 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
             CreateExpenseListCommand request,
             CancellationToken cancellationToken)
         {
+            var currentUserId = _currentUser.UserId!;
+            var user = await _identityService.GetUserAsync(currentUserId);
+
             var expenseList = new ExpenseList
             {
                 Id = Guid.NewGuid(),
@@ -60,7 +66,9 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
             expenseList.Members.Add(new ExpenseListMember
             {
                 Id = Guid.NewGuid(),
-                UserId = _currentUser.UserId!,
+                UserId = currentUserId,
+                DisplayName = user?.DisplayName ?? user?.UserName ?? currentUserId,
+                Email = user?.Email,
                 Role = ExpenseListRole.Owner,
                 JoinedAt = DateTime.UtcNow
             });
@@ -68,7 +76,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
             _context.ExpenseLists.Add(expenseList);
             await _context.SaveChangesAsync(cancellationToken);
 
-            await _defaultCategoryService.CreateDefaultCategoryForListAsync(
+            await _defaultCategoryService.GetOrCreateDefaultExpenseListCategoryAsync(
                 expenseList.Id, cancellationToken);
 
             return expenseList.Id;

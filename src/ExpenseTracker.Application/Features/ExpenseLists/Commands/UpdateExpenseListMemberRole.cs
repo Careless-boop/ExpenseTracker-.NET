@@ -14,7 +14,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
 {
     public record UpdateExpenseListMemberRoleCommand(
         Guid ExpenseListId,
-        string UserId,
+        Guid MemberId,
         ExpenseListRole NewRole
     ) : IRequest;
 
@@ -23,7 +23,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
         public UpdateExpenseListMemberRoleCommandValidator()
         {
             RuleFor(x => x.ExpenseListId).NotEmpty();
-            RuleFor(x => x.UserId).NotEmpty();
+            RuleFor(x => x.MemberId).NotEmpty();
             RuleFor(x => x.NewRole).IsInEnum();
         }
     }
@@ -61,22 +61,22 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
                 throw new ForbiddenException("Only the owner can change member roles.");
             }
 
+            if (request.MemberId == currentMembership.Id)
+            {
+                throw new ValidationException([new ValidationFailure(
+                nameof(request.MemberId),
+                "Cannot change your own role. Transfer ownership instead.")]);
+            }
+
             var targetMembership = await _context.ExpenseListMembers
                 .FirstOrDefaultAsync(m =>
                     m.ExpenseListId == request.ExpenseListId &&
-                    m.UserId == request.UserId,
+                    m.Id == request.MemberId,
                     cancellationToken);
 
             if (targetMembership == null)
             {
-                throw new NotFoundException("Member", request.UserId);
-            }
-
-            if (request.UserId == _currentUser.UserId)
-            {
-                throw new ValidationException([new ValidationFailure(
-                nameof(request.UserId),
-                "Cannot change your own role. Transfer ownership instead.")]);
+                throw new NotFoundException(nameof(ExpenseListMember), request.MemberId);
             }
 
             if (request.NewRole == ExpenseListRole.Owner)

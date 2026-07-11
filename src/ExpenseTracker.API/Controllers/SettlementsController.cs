@@ -33,20 +33,19 @@ namespace ExpenseTracker.API.Controllers
         }
 
         /// <summary>
-        /// Create a settlement (record that current user paid someone)
+        /// Create a settlement (current user marks that they paid ToMemberId)
         /// </summary>
         [HttpPost]
         public async Task<ActionResult<Guid>> CreateSettlement(
             Guid expenseListId,
             [FromBody] CreateSettlementRequest request)
         {
-            var command = new CreateSettlementCommand(
+            var id = await _mediator.Send(new CreateSettlementCommand(
                 expenseListId,
-                request.ToUserId,
+                request.ToMemberId,
                 request.Amount,
-                request.Note);
+                request.Note));
 
-            var id = await _mediator.Send(command);
             return Created($"/api/v1/expense-lists/{expenseListId}/settlements/{id}", new { id });
         }
 
@@ -61,5 +60,5 @@ namespace ExpenseTracker.API.Controllers
         }
     }
 
-    public record CreateSettlementRequest(string ToUserId, decimal Amount, string? Note = null);
+    public record CreateSettlementRequest(Guid ToMemberId, decimal Amount, string? Note = null);
 }

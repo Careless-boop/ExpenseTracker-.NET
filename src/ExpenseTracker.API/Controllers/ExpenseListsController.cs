@@ -86,42 +86,64 @@ namespace ExpenseTracker.API.Controllers
         }
 
         /// <summary>
-        /// Add a member to the expense list (Owner only)
+        /// Add a registered user as a member (Owner only)
         /// </summary>
         [HttpPost("{id:guid}/members")]
         public async Task<ActionResult<Guid>> AddMember(
             Guid id,
             [FromBody] AddMemberRequest request)
         {
-            var command = new AddExpenseListMemberCommand(id, request.Email, request.Role);
-            var memberId = await _mediator.Send(command);
+            var memberId = await _mediator.Send(new AddExpenseListMemberCommand(id, request.Email, request.Role));
             return CreatedAtAction(nameof(GetExpenseList), new { id }, new { memberId });
+        }
+
+        /// <summary>
+        /// Add a mock (non-registered) member placeholder (Editor/Owner)
+        /// </summary>
+        [HttpPost("{id:guid}/mock-members")]
+        public async Task<ActionResult<Guid>> AddMockMember(
+            Guid id,
+            [FromBody] AddMockMemberRequest request)
+        {
+            var memberId = await _mediator.Send(new AddMockExpenseListMemberCommand(id, request.DisplayName));
+            return CreatedAtAction(nameof(GetExpenseList), new { id }, new { memberId });
+        }
+
+        /// <summary>
+        /// Claim a mock member slot (current user takes over that placeholder)
+        /// </summary>
+        [HttpPost("{id:guid}/claim/{mockMemberId:guid}")]
+        public async Task<IActionResult> ClaimMockMember(Guid id, Guid mockMemberId)
+        {
+            await _mediator.Send(new ClaimMockMemberCommand(id, mockMemberId));
+            return NoContent();
         }
 
         /// <summary>
         /// Update a member's role (Owner only)
         /// </summary>
-        [HttpPut("{id:guid}/members/{userId}")]
+        [HttpPut("{id:guid}/members/{memberId:guid}")]
         public async Task<IActionResult> UpdateMemberRole(
             Guid id,
-            string userId,
+            Guid memberId,
             [FromBody] UpdateMemberRoleRequest request)
         {
-            await _mediator.Send(new UpdateExpenseListMemberRoleCommand(id, userId, request.Role));
+            await _mediator.Send(new UpdateExpenseListMemberRoleCommand(id, memberId, request.Role));
             return NoContent();
         }
 
         /// <summary>
-        /// Remove a member from the expense list (Owner only, or self to leave)
+        /// Remove a member (Owner only, or self to leave)
         /// </summary>
-        [HttpDelete("{id:guid}/members/{userId}")]
-        public async Task<IActionResult> RemoveMember(Guid id, string userId)
+        [HttpDelete("{id:guid}/members/{memberId:guid}")]
+        public async Task<IActionResult> RemoveMember(Guid id, Guid memberId)
         {
-            await _mediator.Send(new RemoveExpenseListMemberCommand(id, userId));
+            await _mediator.Send(new RemoveExpenseListMemberCommand(id, memberId));
             return NoContent();
         }
     }
 
     public record AddMemberRequest(string Email, ExpenseListRole Role = ExpenseListRole.Editor);
+    public record AddMockMemberRequest(string DisplayName);
     public record UpdateMemberRoleRequest(ExpenseListRole Role);
 }

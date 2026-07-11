@@ -20,8 +20,9 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
     );
 
     public record MemberBalanceDto(
-        string UserId,
-        string? UserName,
+        Guid MemberId,
+        string DisplayName,
+        bool IsMock,
         decimal Balance,
         decimal TotalPaid,
         decimal TotalShare
@@ -33,18 +34,15 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
         private readonly IApplicationDbContext _context;
         private readonly ICurrentUserService _currentUser;
         private readonly IBalanceCalculationService _balanceCalculation;
-        private readonly IIdentityService _identityService;
 
         public GetExpenseListBalancesQueryHandler(
             IApplicationDbContext context,
             ICurrentUserService currentUser,
-            IBalanceCalculationService balanceCalculation,
-            IIdentityService identityService)
+            IBalanceCalculationService balanceCalculation)
         {
             _context = context;
             _currentUser = currentUser;
             _balanceCalculation = balanceCalculation;
-            _identityService = identityService;
         }
 
         public async Task<ExpenseListBalancesDto> Handle(
@@ -65,42 +63,34 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
 
             var expenseList = membership.ExpenseList;
 
-            var transactions = await _context.Transactions
+            var members = await _context.ExpenseListMembers
+                .Where(m => m.ExpenseListId == request.ExpenseListId)
+                .ToListAsync(cancellationToken);
+
+            var transactions = await _context.ExpenseListTransactions
                 .Include(t => t.Participants)
                 .Where(t => t.ExpenseListId == request.ExpenseListId)
-                .Where(t => !t.IsDeleted)
                 .ToListAsync(cancellationToken);
 
-            var memberIds = await _context.ExpenseListMembers
-                .Where(m => m.ExpenseListId == request.ExpenseListId)
-                .Select(m => m.UserId)
-                .ToListAsync(cancellationToken);
-
-            var users = await _identityService.GetUsersByIdsAsync(memberIds);
-            var userMap = users.ToDictionary(u => u.Id, u => u.DisplayName ?? u.UserName);
-
-            var memberStats = memberIds.ToDictionary(
-                id => id,
+            var memberStats = members.ToDictionary(
+                m => m.Id,
                 _ => (TotalPaid: 0m, TotalShare: 0m));
 
             foreach (var transaction in transactions)
             {
-                if (memberStats.ContainsKey(transaction.PaidByUserId))
+                if (memberStats.ContainsKey(transaction.PaidByMemberId))
                 {
-                    var stats = memberStats[transaction.PaidByUserId];
-                    memberStats[transaction.PaidByUserId] = (stats.TotalPaid + transaction.Amount, stats.TotalShare);
+                    var stats = memberStats[transaction.PaidByMemberId];
+                    memberStats[transaction.PaidByMemberId] = (stats.TotalPaid + transaction.Amount, stats.TotalShare);
                 }
 
-                if (transaction.HasSplit)
+                var shares = transaction.CalculateShares();
+                foreach (var (memberId, share) in shares)
                 {
-                    var shares = transaction.CalculateShares();
-                    foreach (var (userId, share) in shares)
+                    if (memberStats.ContainsKey(memberId))
                     {
-                        if (memberStats.ContainsKey(userId))
-                        {
-                            var stats = memberStats[userId];
-                            memberStats[userId] = (stats.TotalPaid, stats.TotalShare + share);
-                        }
+                        var stats = memberStats[memberId];
+                        memberStats[memberId] = (stats.TotalPaid, stats.TotalShare + share);
                     }
                 }
             }
@@ -108,13 +98,16 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
             var netBalances = await _balanceCalculation.CalculateNetBalancesAsync(
                 request.ExpenseListId, cancellationToken);
 
-            var memberBalances = memberIds.Select(id => new MemberBalanceDto(
-                id,
-                userMap.GetValueOrDefault(id),
-                netBalances.GetValueOrDefault(id, 0),
-                memberStats[id].TotalPaid,
-                memberStats[id].TotalShare
-            )).ToList();
+            var memberBalances = members
+                .Select(m => new MemberBalanceDto(
+                    m.Id,
+                    m.DisplayName,
+                    m.IsMock,
+                    netBalances.GetValueOrDefault(m.Id, 0),
+                    memberStats[m.Id].TotalPaid,
+                    memberStats[m.Id].TotalShare
+                ))
+                .ToList();
 
             var simplifiedDebts = await _balanceCalculation.CalculateSimplifiedDebtsAsync(
                 request.ExpenseListId, cancellationToken);

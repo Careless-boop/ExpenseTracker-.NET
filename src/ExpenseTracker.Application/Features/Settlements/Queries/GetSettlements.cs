@@ -17,16 +17,13 @@ namespace ExpenseTracker.Application.Features.Settlements.Queries
     {
         private readonly IApplicationDbContext _context;
         private readonly ICurrentUserService _currentUser;
-        private readonly IIdentityService _identityService;
 
         public GetSettlementsQueryHandler(
             IApplicationDbContext context,
-            ICurrentUserService currentUser,
-            IIdentityService identityService)
+            ICurrentUserService currentUser)
         {
             _context = context;
             _currentUser = currentUser;
-            _identityService = identityService;
         }
 
         public async Task<IReadOnlyList<SettlementDto>> Handle(
@@ -40,36 +37,26 @@ namespace ExpenseTracker.Application.Features.Settlements.Queries
                     cancellationToken);
 
             if (!isMember)
-            {
                 throw new NotFoundException(nameof(ExpenseList), request.ExpenseListId);
-            }
 
-            var settlements = await _context.Settlements
+            return await _context.Settlements
                 .Where(s => s.ExpenseListId == request.ExpenseListId)
                 .OrderByDescending(s => s.SettledAt)
                 .Skip((request.PageNumber - 1) * request.PageSize)
                 .Take(request.PageSize)
+                .Select(s => new SettlementDto(
+                    s.Id,
+                    s.ExpenseListId,
+                    s.FromMemberId,
+                    s.FromMember.DisplayName,
+                    s.ToMemberId,
+                    s.ToMember.DisplayName,
+                    s.Amount,
+                    s.SettledAt,
+                    s.Note,
+                    s.CreatedAt
+                ))
                 .ToListAsync(cancellationToken);
-
-            var userIds = settlements
-                .SelectMany(s => new[] { s.FromUserId, s.ToUserId })
-                .Distinct();
-
-            var users = await _identityService.GetUsersByIdsAsync(userIds);
-            var userMap = users.ToDictionary(u => u.Id, u => u.DisplayName ?? u.UserName);
-
-            return settlements.Select(s => new SettlementDto(
-                s.Id,
-                s.ExpenseListId,
-                s.FromUserId,
-                userMap.GetValueOrDefault(s.FromUserId),
-                s.ToUserId,
-                userMap.GetValueOrDefault(s.ToUserId),
-                s.Amount,
-                s.SettledAt,
-                s.Note,
-                s.CreatedAt
-            )).ToList();
         }
     }
 }

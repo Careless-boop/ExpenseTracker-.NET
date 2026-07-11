@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Domain.Entities;
+using ExpenseTracker.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace ExpenseTracker.Infrastructure.Identity
@@ -13,9 +13,8 @@ namespace ExpenseTracker.Infrastructure.Identity
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
 
-        public ICollection<Category> Categories { get; set; } = new List<Category>();
-        public ICollection<Transaction> CreatedTransactions { get; set; } = new List<Transaction>();
-        public ICollection<Transaction> PaidTransactions { get; set; } = new List<Transaction>();
+        public ICollection<PersonalTransaction> PersonalTransactions { get; set; } = new List<PersonalTransaction>();
+        public ICollection<PersonalCategory> PersonalCategories { get; set; } = new List<PersonalCategory>();
         public ICollection<ExpenseListMember> ExpenseListMemberships { get; set; } = new List<ExpenseListMember>();
     }
 }

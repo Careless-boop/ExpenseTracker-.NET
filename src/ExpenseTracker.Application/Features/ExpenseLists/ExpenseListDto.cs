@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Domain.Enums;
+using ExpenseTracker.Domain.Enums;
 
 namespace ExpenseTracker.Application.Features.ExpenseLists
 {
@@ -27,11 +27,12 @@ namespace ExpenseTracker.Application.Features.ExpenseLists
     );
 
     public record ExpenseListMemberDto(
-        string UserId,
-        string? UserName,
+        Guid MemberId,
+        string DisplayName,
+        string? UserId,
         string? Email,
-        string? AvatarUrl,
         ExpenseListRole Role,
-        DateTime JoinedAt
+        DateTime JoinedAt,
+        bool IsMock
     );
 }

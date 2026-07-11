@@ -3,6 +3,7 @@ using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Domain.Enums;
 using ExpenseTracker.Domain.Interfaces;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,8 +14,17 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
 {
     public record RemoveExpenseListMemberCommand(
         Guid ExpenseListId,
-        string UserId
+        Guid MemberId
     ) : IRequest;
+
+    public class RemoveExpenseListMemberCommandValidator : AbstractValidator<RemoveExpenseListMemberCommand>
+    {
+        public RemoveExpenseListMemberCommandValidator()
+        {
+            RuleFor(x => x.ExpenseListId).NotEmpty();
+            RuleFor(x => x.MemberId).NotEmpty();
+        }
+    }
 
     public class RemoveExpenseListMemberCommandHandler : IRequestHandler<RemoveExpenseListMemberCommand>
     {
@@ -47,15 +57,15 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
             var targetMembership = await _context.ExpenseListMembers
                 .FirstOrDefaultAsync(m =>
                     m.ExpenseListId == request.ExpenseListId &&
-                    m.UserId == request.UserId,
+                    m.Id == request.MemberId,
                     cancellationToken);
 
             if (targetMembership == null)
             {
-                throw new NotFoundException("Member", request.UserId);
+                throw new NotFoundException(nameof(ExpenseListMember), request.MemberId);
             }
 
-            var isSelf = request.UserId == _currentUser.UserId;
+            var isSelf = request.MemberId == currentMembership.Id;
             var isOwner = currentMembership.Role == ExpenseListRole.Owner;
 
             if (!isSelf && !isOwner)
@@ -63,10 +73,10 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
                 throw new ForbiddenException("Only the owner can remove other members.");
             }
 
-            if (isSelf && currentMembership.Role == ExpenseListRole.Owner)
+            if (isSelf && isOwner)
             {
                 throw new ValidationException([new ValidationFailure(
-                nameof(request.UserId),
+                nameof(request.MemberId),
                 "Owner cannot leave. Transfer ownership first or delete the list.")]);
             }
 

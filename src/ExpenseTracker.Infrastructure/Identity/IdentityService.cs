@@ -78,7 +78,7 @@ namespace ExpenseTracker.Infrastructure.Identity
                 return Result<string>.Failure(result.Errors.Select(e => e.Description));
             }
 
-            await _defaultCategoryService.CreateDefaultCategoryForUserAsync(user.Id);
+            await _defaultCategoryService.GetOrCreateDefaultPersonalCategoryAsync(user.Id);
 
             return Result<string>.Success(user.Id);
         }

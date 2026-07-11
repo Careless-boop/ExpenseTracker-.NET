@@ -12,7 +12,7 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
 {
     public record CreateSettlementCommand(
         Guid ExpenseListId,
-        string ToUserId,
+        Guid ToMemberId,
         decimal Amount,
         string? Note = null
     ) : IRequest<Guid>;
@@ -22,7 +22,7 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
         public CreateSettlementCommandValidator()
         {
             RuleFor(x => x.ExpenseListId).NotEmpty();
-            RuleFor(x => x.ToUserId).NotEmpty();
+            RuleFor(x => x.ToMemberId).NotEmpty();
             RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Amount must be greater than zero");
             RuleFor(x => x.Note).MaximumLength(500).When(x => x.Note != null);
         }
@@ -47,34 +47,37 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
         {
             var currentUserId = _currentUser.UserId!;
 
-            var members = await _context.ExpenseListMembers
-                .Where(m => m.ExpenseListId == request.ExpenseListId)
-                .Where(m => m.UserId == currentUserId || m.UserId == request.ToUserId)
-                .ToListAsync(cancellationToken);
+            var currentMembership = await _context.ExpenseListMembers
+                .FirstOrDefaultAsync(m =>
+                    m.ExpenseListId == request.ExpenseListId &&
+                    m.UserId == currentUserId,
+                    cancellationToken);
 
-            if (!members.Any(m => m.UserId == currentUserId))
-            {
+            if (currentMembership == null)
                 throw new NotFoundException(nameof(ExpenseList), request.ExpenseListId);
-            }
 
-            if (!members.Any(m => m.UserId == request.ToUserId))
-            {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure(
-                nameof(request.ToUserId),
-                "Recipient must be a member of the expense list")]);
-            }
+            var toMember = await _context.ExpenseListMembers
+                .FirstOrDefaultAsync(m =>
+                    m.ExpenseListId == request.ExpenseListId &&
+                    m.Id == request.ToMemberId,
+                    cancellationToken);
 
-            if (currentUserId == request.ToUserId)
+            if (toMember == null)
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure(
-                nameof(request.ToUserId),
+                nameof(request.ToMemberId),
+                "Recipient is not a member of this expense list")]);
+
+            if (currentMembership.Id == request.ToMemberId)
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure(
+                nameof(request.ToMemberId),
                 "Cannot settle with yourself")]);
 
             var settlement = new Settlement
             {
                 Id = Guid.NewGuid(),
                 ExpenseListId = request.ExpenseListId,
-                FromUserId = currentUserId,
-                ToUserId = request.ToUserId,
+                FromMemberId = currentMembership.Id,
+                ToMemberId = request.ToMemberId,
                 Amount = request.Amount,
                 SettledAt = DateTime.UtcNow,
                 Note = request.Note

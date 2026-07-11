@@ -45,7 +45,7 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
                 throw new ForbiddenException();
             }
 
-            var canDelete = settlement.FromUserId == _currentUser.UserId ||
+            var canDelete = settlement.FromMemberId == membership.Id ||
                             membership.Role == Domain.Enums.ExpenseListRole.Owner;
 
             if (!canDelete)

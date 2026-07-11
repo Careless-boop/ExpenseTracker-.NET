@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Application.Common.Interfaces;
+using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Infrastructure.Identity;
 using ExpenseTracker.Infrastructure.Persistence.Interceptors;
@@ -20,11 +20,13 @@ namespace ExpenseTracker.Infrastructure.Persistence
             _auditableInterceptor = auditableInterceptor;
         }
 
-        public DbSet<Category> Categories => Set<Category>();
-        public DbSet<Transaction> Transactions => Set<Transaction>();
-        public DbSet<TransactionParticipant> TransactionParticipants => Set<TransactionParticipant>();
+        public DbSet<PersonalTransaction> PersonalTransactions => Set<PersonalTransaction>();
+        public DbSet<PersonalCategory> PersonalCategories => Set<PersonalCategory>();
         public DbSet<ExpenseList> ExpenseLists => Set<ExpenseList>();
         public DbSet<ExpenseListMember> ExpenseListMembers => Set<ExpenseListMember>();
+        public DbSet<ExpenseListTransaction> ExpenseListTransactions => Set<ExpenseListTransaction>();
+        public DbSet<ExpenseListTransactionParticipant> ExpenseListTransactionParticipants => Set<ExpenseListTransactionParticipant>();
+        public DbSet<ExpenseListCategory> ExpenseListCategories => Set<ExpenseListCategory>();
         public DbSet<Settlement> Settlements => Set<Settlement>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -1,6 +1,5 @@
-﻿using ExpenseTracker.Application.Features.Categories;
-using ExpenseTracker.Application.Features.Categories.Commands;
-using ExpenseTracker.Application.Features.Categories.Queries;
+﻿using ExpenseTracker.Application.Features.Personal;
+using ExpenseTracker.Application.Features.Personal.Categories;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,49 +7,46 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExpenseTracker.API.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/v1/personal/categories")]
     [Authorize]
-    public class CategoriesController : ControllerBase
+    public class PersonalCategoriesController : ControllerBase
     {
         private readonly ISender _mediator;
 
-        public CategoriesController(ISender mediator)
+        public PersonalCategoriesController(ISender mediator)
         {
             _mediator = mediator;
         }
 
-        /// <summary>
-        /// Get categories. If expenseListId is provided, returns list categories. Otherwise returns personal categories.
-        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<CategoryDto>>> GetCategories(
-            [FromQuery] Guid? expenseListId = null)
+        public async Task<ActionResult<IReadOnlyList<PersonalCategoryDto>>> GetCategories()
         {
-            var result = await _mediator.Send(new GetCategoriesQuery(expenseListId));
+            var result = await _mediator.Send(new GetPersonalCategoriesQuery());
             return Ok(result);
         }
 
         [HttpGet("{id:guid}")]
-        public async Task<ActionResult<CategoryDto>> GetCategory(Guid id)
+        public async Task<ActionResult<PersonalCategoryDto>> GetCategory(Guid id)
         {
-            var result = await _mediator.Send(new GetCategoryByIdQuery(id));
+            var result = await _mediator.Send(new GetPersonalCategoryByIdQuery(id));
             return Ok(result);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Guid>> CreateCategory(CreateCategoryCommand command)
+        public async Task<ActionResult<Guid>> CreateCategory(
+            [FromBody] CreatePersonalCategoryCommand command)
         {
             var id = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetCategory), new { id }, new { id });
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> UpdateCategory(Guid id, UpdateCategoryCommand command)
+        public async Task<IActionResult> UpdateCategory(
+            Guid id,
+            [FromBody] UpdatePersonalCategoryCommand command)
         {
             if (id != command.Id)
-            {
                 return BadRequest(new { error = "ID mismatch" });
-            }
 
             await _mediator.Send(command);
             return NoContent();
@@ -61,7 +57,7 @@ namespace ExpenseTracker.API.Controllers
             Guid id,
             [FromQuery] Guid? reassignToCategoryId = null)
         {
-            await _mediator.Send(new DeleteCategoryCommand(id, reassignToCategoryId));
+            await _mediator.Send(new DeletePersonalCategoryCommand(id, reassignToCategoryId));
             return NoContent();
         }
     }

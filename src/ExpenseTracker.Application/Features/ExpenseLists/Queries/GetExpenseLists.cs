@@ -33,7 +33,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                     m.ExpenseList.Description,
                     m.ExpenseList.CoverImage,
                     m.ExpenseList.Members.Count,
-                    m.ExpenseList.Transactions.Count(t => !t.IsDeleted),
+                    m.ExpenseList.Transactions.Count,
                     m.Role,
                     m.ExpenseList.CreatedAt
                 ))

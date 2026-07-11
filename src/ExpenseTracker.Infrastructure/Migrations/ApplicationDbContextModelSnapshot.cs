@@ -22,73 +22,6 @@ namespace ExpenseTracker.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Category", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Color")
-                        .HasMaxLength(7)
-                        .HasColumnType("nvarchar(7)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("ExpenseListId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Icon")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("UserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExpenseListId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("ExpenseListId", "IsDefault");
-
-                    b.HasIndex("UserId", "IsDefault");
-
-                    b.ToTable("Categories", t =>
-                        {
-                            t.HasCheckConstraint("CK_Category_Ownership", "(\"UserId\" IS NOT NULL AND \"ExpenseListId\" IS NULL) OR (\"UserId\" IS NULL AND \"ExpenseListId\" IS NOT NULL)");
-                        });
-                });
-
             modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseList", b =>
                 {
                     b.Property<Guid>("Id")
@@ -135,23 +68,109 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.ToTable("ExpenseLists");
                 });
 
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ExpenseListId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpenseListId");
+
+                    b.HasIndex("ExpenseListId", "IsDefault");
+
+                    b.ToTable("ExpenseListCategories");
+                });
+
             modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListMember", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<Guid>("ExpenseListId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Role")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
-                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
@@ -162,12 +181,13 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.HasIndex("ExpenseListId", "UserId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
 
                     b.ToTable("ExpenseListMembers");
                 });
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Settlement", b =>
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListTransaction", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -177,63 +197,7 @@ namespace ExpenseTracker.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("ExpenseListId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("FromUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("SettledAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ToUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExpenseListId");
-
-                    b.HasIndex("FromUserId");
-
-                    b.HasIndex("SettledAt");
-
-                    b.HasIndex("ToUserId");
-
-                    b.ToTable("Settlements");
-                });
-
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Transaction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("CategoryId")
+                    b.Property<Guid?>("CategoryId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -261,7 +225,7 @@ namespace ExpenseTracker.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<Guid?>("ExpenseListId")
+                    b.Property<Guid>("ExpenseListId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDeleted")
@@ -273,10 +237,8 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PaidByUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("PaidByMemberId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
@@ -291,25 +253,106 @@ namespace ExpenseTracker.Infrastructure.Migrations
 
                     b.HasIndex("ExpenseListId");
 
-                    b.HasIndex("PaidByUserId");
+                    b.HasIndex("PaidByMemberId");
 
                     b.HasIndex("ExpenseListId", "Date");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("ExpenseListTransactions");
                 });
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.TransactionParticipant", b =>
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListTransactionParticipant", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal?>("CustomShareAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("TransactionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("TransactionId", "MemberId")
+                        .IsUnique();
+
+                    b.ToTable("ExpenseListTransactionParticipants");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.PersonalCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -318,14 +361,135 @@ namespace ExpenseTracker.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TransactionId");
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "IsDefault");
+
+                    b.ToTable("PersonalCategories");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.PersonalTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("Date");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("TransactionId", "UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId", "Date");
 
-                    b.ToTable("TransactionParticipants");
+                    b.ToTable("PersonalTransactions");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Settlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ExpenseListId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FromMemberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("SettledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ToMemberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpenseListId");
+
+                    b.HasIndex("FromMemberId");
+
+                    b.HasIndex("SettledAt");
+
+                    b.HasIndex("ToMemberId");
+
+                    b.ToTable("Settlements");
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.ApplicationUser", b =>
@@ -544,17 +708,13 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Category", b =>
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListCategory", b =>
                 {
                     b.HasOne("ExpenseTracker.Domain.Entities.ExpenseList", "ExpenseList")
                         .WithMany("Categories")
                         .HasForeignKey("ExpenseListId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany("Categories")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("ExpenseList");
                 });
@@ -570,10 +730,85 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany("ExpenseListMemberships")
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("ExpenseList");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListTransaction", b =>
+                {
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseListCategory", "Category")
+                        .WithMany("Transactions")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseList", "ExpenseList")
+                        .WithMany("Transactions")
+                        .HasForeignKey("ExpenseListId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseListMember", "PaidByMember")
+                        .WithMany()
+                        .HasForeignKey("PaidByMemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
                     b.Navigation("ExpenseList");
+
+                    b.Navigation("PaidByMember");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListTransactionParticipant", b =>
+                {
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseListMember", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseListTransaction", "Transaction")
+                        .WithMany("Participants")
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("Transaction");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.PersonalCategory", b =>
+                {
+                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany("PersonalCategories")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.PersonalTransaction", b =>
+                {
+                    b.HasOne("ExpenseTracker.Domain.Entities.PersonalCategory", "Category")
+                        .WithMany("Transactions")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany("PersonalTransactions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("ExpenseTracker.Domain.Entities.Settlement", b =>
@@ -584,66 +819,23 @@ namespace ExpenseTracker.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseListMember", "FromMember")
                         .WithMany()
-                        .HasForeignKey("FromUserId")
+                        .HasForeignKey("FromMemberId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseListMember", "ToMember")
                         .WithMany()
-                        .HasForeignKey("ToUserId")
+                        .HasForeignKey("ToMemberId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ExpenseList");
-                });
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Transaction", b =>
-                {
-                    b.HasOne("ExpenseTracker.Domain.Entities.Category", "Category")
-                        .WithMany("Transactions")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.Navigation("FromMember");
 
-                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany("CreatedTransactions")
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ExpenseTracker.Domain.Entities.ExpenseList", "ExpenseList")
-                        .WithMany("Transactions")
-                        .HasForeignKey("ExpenseListId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany("PaidTransactions")
-                        .HasForeignKey("PaidByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-
-                    b.Navigation("ExpenseList");
-                });
-
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.TransactionParticipant", b =>
-                {
-                    b.HasOne("ExpenseTracker.Domain.Entities.Transaction", "Transaction")
-                        .WithMany("Participants")
-                        .HasForeignKey("TransactionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ExpenseTracker.Infrastructure.Identity.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Transaction");
+                    b.Navigation("ToMember");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -697,11 +889,6 @@ namespace ExpenseTracker.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Category", b =>
-                {
-                    b.Navigation("Transactions");
-                });
-
             modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseList", b =>
                 {
                     b.Navigation("Categories");
@@ -713,20 +900,28 @@ namespace ExpenseTracker.Infrastructure.Migrations
                     b.Navigation("Transactions");
                 });
 
-            modelBuilder.Entity("ExpenseTracker.Domain.Entities.Transaction", b =>
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListCategory", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.ExpenseListTransaction", b =>
                 {
                     b.Navigation("Participants");
                 });
 
+            modelBuilder.Entity("ExpenseTracker.Domain.Entities.PersonalCategory", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.ApplicationUser", b =>
                 {
-                    b.Navigation("Categories");
-
-                    b.Navigation("CreatedTransactions");
-
                     b.Navigation("ExpenseListMemberships");
 
-                    b.Navigation("PaidTransactions");
+                    b.Navigation("PersonalCategories");
+
+                    b.Navigation("PersonalTransactions");
                 });
 #pragma warning restore 612, 618
         }

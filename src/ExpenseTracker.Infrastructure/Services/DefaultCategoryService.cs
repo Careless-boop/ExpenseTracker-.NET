@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Application.Common.Interfaces;
+using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,88 +17,56 @@ namespace ExpenseTracker.Infrastructure.Services
             _context = context;
         }
 
-        public async Task<Guid> CreateDefaultCategoryForUserAsync(
+        public async Task<Guid> GetOrCreateDefaultPersonalCategoryAsync(
             string userId,
             CancellationToken cancellationToken = default)
         {
-            var category = new Category
+            var existing = await _context.PersonalCategories
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.IsDefault, cancellationToken);
+
+            if (existing != null)
+                return existing.Id;
+
+            var category = new PersonalCategory
             {
                 Id = Guid.NewGuid(),
+                UserId = userId,
                 Name = DefaultCategoryName,
                 Icon = DefaultCategoryIcon,
                 Color = DefaultCategoryColor,
-                IsDefault = true,
-                UserId = userId,
-                ExpenseListId = null
+                IsDefault = true
             };
 
-            _context.Categories.Add(category);
+            _context.PersonalCategories.Add(category);
             await _context.SaveChangesAsync(cancellationToken);
 
             return category.Id;
         }
 
-        public async Task<Guid> CreateDefaultCategoryForListAsync(
+        public async Task<Guid> GetOrCreateDefaultExpenseListCategoryAsync(
             Guid expenseListId,
             CancellationToken cancellationToken = default)
         {
-            var category = new Category
+            var existing = await _context.ExpenseListCategories
+                .FirstOrDefaultAsync(c => c.ExpenseListId == expenseListId && c.IsDefault, cancellationToken);
+
+            if (existing != null)
+                return existing.Id;
+
+            var category = new ExpenseListCategory
             {
                 Id = Guid.NewGuid(),
+                ExpenseListId = expenseListId,
                 Name = DefaultCategoryName,
                 Icon = DefaultCategoryIcon,
                 Color = DefaultCategoryColor,
-                IsDefault = true,
-                UserId = null,
-                ExpenseListId = expenseListId
+                IsDefault = true
             };
 
-            _context.Categories.Add(category);
+            _context.ExpenseListCategories.Add(category);
             await _context.SaveChangesAsync(cancellationToken);
 
             return category.Id;
-        }
-
-        public async Task<Guid> GetDefaultCategoryIdAsync(
-            string? userId,
-            Guid? expenseListId,
-            CancellationToken cancellationToken = default)
-        {
-            Category? defaultCategory;
-
-            if (expenseListId.HasValue)
-            {
-                defaultCategory = await _context.Categories
-                    .FirstOrDefaultAsync(c =>
-                        c.ExpenseListId == expenseListId.Value &&
-                        c.IsDefault,
-                        cancellationToken);
-
-                if (defaultCategory == null)
-                {
-                    return await CreateDefaultCategoryForListAsync(expenseListId.Value, cancellationToken);
-                }
-            }
-            else if (userId != null)
-            {
-                defaultCategory = await _context.Categories
-                    .FirstOrDefaultAsync(c =>
-                        c.UserId == userId &&
-                        c.ExpenseListId == null &&
-                        c.IsDefault,
-                        cancellationToken);
-
-                if (defaultCategory == null)
-                {
-                    return await CreateDefaultCategoryForUserAsync(userId, cancellationToken);
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Either userId or expenseListId must be provided");
-            }
-
-            return defaultCategory.Id;
         }
     }
 }
