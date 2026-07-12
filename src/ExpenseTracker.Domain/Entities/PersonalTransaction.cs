@@ -14,5 +14,8 @@ namespace ExpenseTracker.Domain.Entities
 
         public Guid? CategoryId { get; set; }
         public PersonalCategory? Category { get; set; }
+
+        /// <summary>Set when this row was projected from a closed shared list, which makes closing idempotent and reopening reversible.</summary>
+        public Guid? SourceExpenseListId { get; set; }
     }
 }

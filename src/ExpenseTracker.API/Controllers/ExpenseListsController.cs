@@ -98,6 +98,27 @@ namespace ExpenseTracker.API.Controllers
         }
 
         /// <summary>
+        /// Close the list (Owner only). Freezes it and files each member's share of the expenses
+        /// into their personal transactions, unless they opted out in settings.
+        /// </summary>
+        [HttpPost("{id:guid}/close")]
+        public async Task<IActionResult> CloseExpenseList(Guid id)
+        {
+            await _mediator.Send(new CloseExpenseListCommand(id));
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Reopen the list (Owner only). Withdraws the personal transactions the close created.
+        /// </summary>
+        [HttpPost("{id:guid}/reopen")]
+        public async Task<IActionResult> ReopenExpenseList(Guid id)
+        {
+            await _mediator.Send(new ReopenExpenseListCommand(id));
+            return NoContent();
+        }
+
+        /// <summary>
         /// Add a mock (non-registered) member placeholder (Editor/Owner)
         /// </summary>
         [HttpPost("{id:guid}/mock-members")]

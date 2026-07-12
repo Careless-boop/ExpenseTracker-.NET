@@ -35,7 +35,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                     m.ExpenseList.Members.Count,
                     m.ExpenseList.Transactions.Count,
                     m.Role,
-                    m.ExpenseList.CreatedAt
+                    m.ExpenseList.CreatedAt,
+                    m.ExpenseList.ClosedAt
                 ))
                 .ToListAsync(cancellationToken);
         }

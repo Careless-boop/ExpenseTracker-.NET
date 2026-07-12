@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Common;
 ﻿using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
@@ -52,6 +53,8 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
             {
                 throw new ForbiddenException("Only the settlement creator or list owner can delete this settlement.");
             }
+
+            await _context.EnsureNotClosedAsync(settlement.ExpenseListId, cancellationToken);
 
             _context.Settlements.Remove(settlement);
             await _context.SaveChangesAsync(cancellationToken);

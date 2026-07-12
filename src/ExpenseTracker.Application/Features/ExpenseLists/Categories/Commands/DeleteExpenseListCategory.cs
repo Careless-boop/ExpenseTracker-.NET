@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
@@ -57,6 +58,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Categories.Commands
 
             if (membership == null || !membership.CanEdit)
                 throw new ForbiddenException("You need Editor or Owner role to manage categories.");
+
+            await _context.EnsureNotClosedAsync(category.ExpenseListId, cancellationToken);
 
             if (category.IsDefault)
                 throw new ValidationException([new ValidationFailure(

@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
@@ -65,6 +66,8 @@ namespace ExpenseTracker.Application.Features.Settlements.Commands
 
             if (!currentMembership.CanEdit)
                 throw new ForbiddenException("You need Editor or Owner role to record settlements.");
+
+            await _context.EnsureNotClosedAsync(request.ExpenseListId, cancellationToken);
 
             var fromMemberId = request.FromMemberId ?? currentMembership.Id;
 

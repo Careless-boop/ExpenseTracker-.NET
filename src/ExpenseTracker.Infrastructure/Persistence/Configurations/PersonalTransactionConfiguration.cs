@@ -40,6 +40,7 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations
             builder.HasIndex(t => t.UserId);
             builder.HasIndex(t => t.Date);
             builder.HasIndex(t => new { t.UserId, t.Date });
+            builder.HasIndex(t => t.SourceExpenseListId);
         }
     }
 }

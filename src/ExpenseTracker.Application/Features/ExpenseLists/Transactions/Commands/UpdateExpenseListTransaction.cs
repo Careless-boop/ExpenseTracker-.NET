@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
@@ -82,6 +83,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
 
             if (currentMembership == null || !currentMembership.CanEdit)
                 throw new ForbiddenException("You need Editor or Owner role to update transactions.");
+
+            await _context.EnsureNotClosedAsync(transaction.ExpenseListId, cancellationToken);
 
             var listMemberIds = await _context.ExpenseListMembers
                 .Where(m => m.ExpenseListId == transaction.ExpenseListId)

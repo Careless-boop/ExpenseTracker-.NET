@@ -14,6 +14,7 @@ namespace ExpenseTracker.Application.Common.Interfaces
         DbSet<ExpenseListTransactionParticipant> ExpenseListTransactionParticipants { get; }
         DbSet<ExpenseListCategory> ExpenseListCategories { get; }
         DbSet<Settlement> Settlements { get; }
+        DbSet<UserSettings> UserSettings { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

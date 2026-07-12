@@ -29,6 +29,7 @@ namespace ExpenseTracker.Infrastructure.Persistence
         public DbSet<ExpenseListTransactionParticipant> ExpenseListTransactionParticipants => Set<ExpenseListTransactionParticipant>();
         public DbSet<ExpenseListCategory> ExpenseListCategories => Set<ExpenseListCategory>();
         public DbSet<Settlement> Settlements => Set<Settlement>();
+        public DbSet<UserSettings> UserSettings => Set<UserSettings>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

@@ -10,7 +10,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists
         int MemberCount,
         int TransactionCount,
         ExpenseListRole CurrentUserRole,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        DateTime? ClosedAt
     );
 
     public record ExpenseListDetailDto(
@@ -23,7 +24,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists
         decimal TotalExpenses,
         decimal TotalIncome,
         ExpenseListRole CurrentUserRole,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        DateTime? ClosedAt
     );
 
     public record ExpenseListMemberDto(

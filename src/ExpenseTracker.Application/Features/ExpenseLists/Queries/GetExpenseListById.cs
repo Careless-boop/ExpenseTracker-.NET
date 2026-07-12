@@ -76,7 +76,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                 totalExpenses,
                 totalIncome,
                 membership.Role,
-                expenseList.CreatedAt
+                expenseList.CreatedAt,
+                expenseList.ClosedAt
             );
         }
     }

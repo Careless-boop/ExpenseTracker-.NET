@@ -34,6 +34,7 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(c => c.UserId);
             builder.HasIndex(c => new { c.UserId, c.IsDefault });
+            builder.HasIndex(c => new { c.UserId, c.SourceExpenseListId });
         }
     }
 }
