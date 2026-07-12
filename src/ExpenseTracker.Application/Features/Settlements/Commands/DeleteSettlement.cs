@@ -1,3 +1,4 @@
+using FluentValidation;
 using ExpenseTracker.Application.Common;
 ﻿using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
@@ -9,6 +10,14 @@ using Microsoft.EntityFrameworkCore;
 namespace ExpenseTracker.Application.Features.Settlements.Commands
 {
     public record DeleteSettlementCommand(Guid Id) : IRequest;
+
+    public class DeleteSettlementCommandValidator : AbstractValidator<DeleteSettlementCommand>
+    {
+        public DeleteSettlementCommandValidator()
+        {
+            RuleFor(x => x.Id).NotEmpty();
+        }
+    }
 
     public class DeleteSettlementCommandHandler : IRequestHandler<DeleteSettlementCommand>
     {

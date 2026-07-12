@@ -1,4 +1,5 @@
-﻿using ExpenseTracker.Application.Features.Settlements;
+﻿using ExpenseTracker.Application.Common.Models;
+using ExpenseTracker.Application.Features.Settlements;
 using ExpenseTracker.Application.Features.Settlements.Commands;
 using ExpenseTracker.Application.Features.Settlements.Queries;
 using MediatR;
@@ -23,7 +24,7 @@ namespace ExpenseTracker.API.Controllers
         /// Get all settlements for an expense list
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<SettlementDto>>> GetSettlements(
+        public async Task<ActionResult<PaginatedList<SettlementDto>>> GetSettlements(
             Guid expenseListId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 20)

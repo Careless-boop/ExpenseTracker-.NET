@@ -1,3 +1,4 @@
+using FluentValidation;
 using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
@@ -8,6 +9,15 @@ using Microsoft.EntityFrameworkCore;
 namespace ExpenseTracker.Application.Features.Personal.Transactions
 {
     public record DeletePersonalTransactionCommand(Guid Id) : IRequest;
+
+    public class DeletePersonalTransactionCommandValidator
+        : AbstractValidator<DeletePersonalTransactionCommand>
+    {
+        public DeletePersonalTransactionCommandValidator()
+        {
+            RuleFor(x => x.Id).NotEmpty();
+        }
+    }
 
     public class DeletePersonalTransactionCommandHandler : IRequestHandler<DeletePersonalTransactionCommand>
     {

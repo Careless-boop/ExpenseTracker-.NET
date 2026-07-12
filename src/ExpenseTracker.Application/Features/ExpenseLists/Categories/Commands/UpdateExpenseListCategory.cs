@@ -27,7 +27,11 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Categories.Commands
             RuleFor(x => x.Id).NotEmpty();
             RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
             RuleFor(x => x.Icon).MaximumLength(50).When(x => x.Icon != null);
-            RuleFor(x => x.Color).MaximumLength(20).When(x => x.Color != null);
+            // The column is nvarchar(7); a longer value used to pass validation and then 500 on truncation.
+            RuleFor(x => x.Color)
+                .Matches(@"^#[0-9A-Fa-f]{6}$")
+                .When(x => !string.IsNullOrEmpty(x.Color))
+                .WithMessage("Color must be a valid hex color code (e.g., #F1F2F2)");
         }
     }
 

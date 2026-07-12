@@ -4,6 +4,9 @@ namespace ExpenseTracker.Application.Common.Models
 {
     public class PaginatedList<T>
     {
+        public const int MaxPageSize = 100;
+        public const int DefaultPageSize = 20;
+
         public IReadOnlyList<T> Items { get; }
         public int PageNumber { get; }
         public int PageSize { get; }
@@ -18,7 +21,7 @@ namespace ExpenseTracker.Application.Common.Models
             TotalCount = totalCount;
             PageNumber = pageNumber;
             PageSize = pageSize;
-            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            TotalPages = pageSize <= 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
         }
 
         public static async Task<PaginatedList<T>> CreateAsync(

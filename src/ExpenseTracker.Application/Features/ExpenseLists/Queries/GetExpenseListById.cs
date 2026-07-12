@@ -37,7 +37,9 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                     m.UserId == _currentUser.UserId,
                     cancellationToken);
 
-            if (membership == null)
+            // ExpenseList can be null even when the membership row survives: the query filter hides a
+            // soft-deleted list, and dereferencing it here used to NRE into a 500.
+            if (membership?.ExpenseList == null)
             {
                 throw new NotFoundException(nameof(ExpenseList), request.Id);
             }

@@ -1,3 +1,4 @@
+using FluentValidation;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Application.Common.Models;
 using ExpenseTracker.Domain.Enums;
@@ -15,6 +16,20 @@ namespace ExpenseTracker.Application.Features.Personal.Transactions
         int PageNumber = 1,
         int PageSize = 20
     ) : IRequest<PaginatedList<PersonalTransactionDto>>;
+
+    public class GetPersonalTransactionsQueryValidator : AbstractValidator<GetPersonalTransactionsQuery>
+    {
+        public GetPersonalTransactionsQueryValidator()
+        {
+            // Unbounded paging isn't just slow: PageNumber = 0 produces Skip(-20), which throws in
+            // the provider and surfaces as a 500 instead of a 400.
+            RuleFor(x => x.PageNumber).GreaterThanOrEqualTo(1);
+            RuleFor(x => x.PageSize).InclusiveBetween(1, PaginatedList<PersonalTransactionDto>.MaxPageSize);
+            RuleFor(x => x.FromDate)
+                .LessThanOrEqualTo(x => x.ToDate)
+                .When(x => x.FromDate.HasValue && x.ToDate.HasValue);
+        }
+    }
 
     public class GetPersonalTransactionsQueryHandler
         : IRequestHandler<GetPersonalTransactionsQuery, PaginatedList<PersonalTransactionDto>>

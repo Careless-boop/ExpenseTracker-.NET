@@ -1,7 +1,9 @@
-﻿using ExpenseTracker.Application.Common.Exceptions;
+using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
+using ExpenseTracker.Application.Common.Models;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Domain.Interfaces;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,9 +13,20 @@ namespace ExpenseTracker.Application.Features.Settlements.Queries
         Guid ExpenseListId,
         int PageNumber = 1,
         int PageSize = 20
-    ) : IRequest<IReadOnlyList<SettlementDto>>;
+    ) : IRequest<PaginatedList<SettlementDto>>;
 
-    public class GetSettlementsQueryHandler : IRequestHandler<GetSettlementsQuery, IReadOnlyList<SettlementDto>>
+    public class GetSettlementsQueryValidator : AbstractValidator<GetSettlementsQuery>
+    {
+        public GetSettlementsQueryValidator()
+        {
+            RuleFor(x => x.ExpenseListId).NotEmpty();
+            RuleFor(x => x.PageNumber).GreaterThanOrEqualTo(1);
+            RuleFor(x => x.PageSize).InclusiveBetween(1, PaginatedList<SettlementDto>.MaxPageSize);
+        }
+    }
+
+    public class GetSettlementsQueryHandler
+        : IRequestHandler<GetSettlementsQuery, PaginatedList<SettlementDto>>
     {
         private readonly IApplicationDbContext _context;
         private readonly ICurrentUserService _currentUser;
@@ -26,7 +39,7 @@ namespace ExpenseTracker.Application.Features.Settlements.Queries
             _currentUser = currentUser;
         }
 
-        public async Task<IReadOnlyList<SettlementDto>> Handle(
+        public async Task<PaginatedList<SettlementDto>> Handle(
             GetSettlementsQuery request,
             CancellationToken cancellationToken)
         {
@@ -39,11 +52,9 @@ namespace ExpenseTracker.Application.Features.Settlements.Queries
             if (!isMember)
                 throw new NotFoundException(nameof(ExpenseList), request.ExpenseListId);
 
-            return await _context.Settlements
+            var query = _context.Settlements
                 .Where(s => s.ExpenseListId == request.ExpenseListId)
                 .OrderByDescending(s => s.SettledAt)
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize)
                 .Select(s => new SettlementDto(
                     s.Id,
                     s.ExpenseListId,
@@ -55,8 +66,10 @@ namespace ExpenseTracker.Application.Features.Settlements.Queries
                     s.SettledAt,
                     s.Note,
                     s.CreatedAt
-                ))
-                .ToListAsync(cancellationToken);
+                ));
+
+            return await PaginatedList<SettlementDto>.CreateAsync(
+                query, request.PageNumber, request.PageSize, cancellationToken);
         }
     }
 }

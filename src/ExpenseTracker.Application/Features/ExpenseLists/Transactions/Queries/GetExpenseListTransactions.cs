@@ -1,3 +1,4 @@
+using FluentValidation;
 using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Application.Common.Models;
@@ -18,6 +19,20 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Queries
         int PageNumber = 1,
         int PageSize = 20
     ) : IRequest<PaginatedList<ExpenseListTransactionDto>>;
+
+    public class GetExpenseListTransactionsQueryValidator
+        : AbstractValidator<GetExpenseListTransactionsQuery>
+    {
+        public GetExpenseListTransactionsQueryValidator()
+        {
+            RuleFor(x => x.ExpenseListId).NotEmpty();
+            RuleFor(x => x.PageNumber).GreaterThanOrEqualTo(1);
+            RuleFor(x => x.PageSize).InclusiveBetween(1, PaginatedList<ExpenseListTransactionDto>.MaxPageSize);
+            RuleFor(x => x.FromDate)
+                .LessThanOrEqualTo(x => x.ToDate)
+                .When(x => x.FromDate.HasValue && x.ToDate.HasValue);
+        }
+    }
 
     public class GetExpenseListTransactionsQueryHandler
         : IRequestHandler<GetExpenseListTransactionsQuery, PaginatedList<ExpenseListTransactionDto>>
