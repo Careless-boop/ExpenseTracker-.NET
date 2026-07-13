@@ -10,11 +10,23 @@ using ExpenseTracker.Infrastructure;
 using ExpenseTracker.Infrastructure.Identity;
 using ExpenseTracker.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Hosted behind Cloudflare and the platform's ingress, so the socket peer is a proxy.
+// Without this every caller collapses into a single rate-limit partition.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = null;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -43,6 +55,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Cloudflare names the real caller in CF-Connecting-IP; RemoteIpAddress is the fallback for
+// requests that reach the API without it, corrected by UseForwardedHeaders.
+static string ClientIp(HttpContext httpContext) =>
+    httpContext.Request.Headers["CF-Connecting-IP"].FirstOrDefault()
+    ?? httpContext.Connection.RemoteIpAddress?.ToString()
+    ?? "unknown";
+
 // Auth endpoints are unauthenticated and guessable, so they get a tighter bucket keyed by IP.
 // Identity lockout backs this up per-account.
 builder.Services.AddRateLimiter(options =>
@@ -51,7 +70,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy(RateLimitPolicies.Auth, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: ClientIp(httpContext),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 10,
@@ -62,8 +81,7 @@ builder.Services.AddRateLimiter(options =>
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? httpContext.Connection.RemoteIpAddress?.ToString()
-                ?? "unknown",
+                ?? ClientIp(httpContext),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 300,
@@ -130,15 +148,25 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Opt-in so the deployed revision brings the schema up to date on boot; local runs and
+// tests keep applying migrations explicitly.
+if (app.Configuration.GetValue<bool>("RunMigrationsOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+}
+
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHttpsRedirection();
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
 
 app.UseRateLimiter();
