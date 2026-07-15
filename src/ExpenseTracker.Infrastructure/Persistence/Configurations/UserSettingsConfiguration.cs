@@ -18,6 +18,11 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations
             builder.Property(s => s.SyncClosedListsToPersonal)
                 .HasDefaultValue(true);
 
+            builder.Property(s => s.Currency)
+                .HasMaxLength(3)
+                .HasDefaultValue("USD")
+                .IsRequired();
+
             builder.HasIndex(s => s.UserId).IsUnique();
 
             builder.HasOne<ApplicationUser>()

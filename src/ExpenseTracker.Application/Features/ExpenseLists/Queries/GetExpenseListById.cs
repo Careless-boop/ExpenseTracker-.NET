@@ -73,6 +73,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                 expenseList.Name,
                 expenseList.Description,
                 expenseList.CoverImage,
+                expenseList.Currency,
                 memberDtos,
                 expenseList.Transactions.Count,
                 totalExpenses,

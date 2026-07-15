@@ -1,12 +1,26 @@
+using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Domain.Interfaces;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Application.Features.Settings
 {
-    public record UpdateUserSettingsCommand(bool SyncClosedListsToPersonal) : IRequest<UserSettingsDto>;
+    public record UpdateUserSettingsCommand(
+        bool SyncClosedListsToPersonal,
+        string Currency = "USD") : IRequest<UserSettingsDto>;
+
+    public class UpdateUserSettingsCommandValidator : AbstractValidator<UpdateUserSettingsCommand>
+    {
+        public UpdateUserSettingsCommandValidator()
+        {
+            RuleFor(x => x.Currency)
+                .Must(SupportedCurrencies.IsSupported)
+                .WithMessage("Unsupported currency.");
+        }
+    }
 
     public class UpdateUserSettingsCommandHandler
         : IRequestHandler<UpdateUserSettingsCommand, UserSettingsDto>
@@ -38,10 +52,11 @@ namespace ExpenseTracker.Application.Features.Settings
             }
 
             settings.SyncClosedListsToPersonal = request.SyncClosedListsToPersonal;
+            settings.Currency = SupportedCurrencies.Normalize(request.Currency);
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            return new UserSettingsDto(settings.SyncClosedListsToPersonal);
+            return new UserSettingsDto(settings.SyncClosedListsToPersonal, settings.Currency);
         }
     }
 }

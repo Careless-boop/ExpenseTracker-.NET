@@ -29,8 +29,10 @@ namespace ExpenseTracker.Application.Features.Settings
                 .FirstOrDefaultAsync(s => s.UserId == _currentUser.UserId, cancellationToken);
 
             // Absent row means untouched defaults, which is the common case — don't write one on read.
+            var defaults = new UserSettings();
             return new UserSettingsDto(
-                settings?.SyncClosedListsToPersonal ?? new UserSettings().SyncClosedListsToPersonal);
+                settings?.SyncClosedListsToPersonal ?? defaults.SyncClosedListsToPersonal,
+                settings?.Currency ?? defaults.Currency);
         }
     }
 }

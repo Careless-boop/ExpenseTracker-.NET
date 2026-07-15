@@ -158,11 +158,12 @@ if (app.Configuration.GetValue<bool>("RunMigrationsOnStartup"))
 
 app.UseForwardedHeaders();
 
+// No HTTPS redirect: TLS terminates at the ingress in production, and in development a
+// redirect to the HTTPS port would send the SPA cross-origin, which strips its bearer token.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseHttpsRedirection();
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

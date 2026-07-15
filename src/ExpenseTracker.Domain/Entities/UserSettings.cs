@@ -11,5 +11,11 @@ namespace ExpenseTracker.Domain.Entities
         /// transactions under a category named after the list.
         /// </summary>
         public bool SyncClosedListsToPersonal { get; set; } = true;
+
+        /// <summary>
+        /// ISO 4217 code used to format the user's personal ledger, and the default for lists they
+        /// create. A display attribute only — amounts are never converted.
+        /// </summary>
+        public string Currency { get; set; } = "USD";
     }
 }

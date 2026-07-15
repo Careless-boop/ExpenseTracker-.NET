@@ -8,6 +8,12 @@ namespace ExpenseTracker.Domain.Entities
         public string? Description { get; set; }
         public string? CoverImage { get; set; }
 
+        /// <summary>
+        /// ISO 4217 code the list's amounts are shown in. Defaults from the creator's setting and can
+        /// be changed by the owner. A display attribute only — amounts are never converted.
+        /// </summary>
+        public string Currency { get; set; } = "USD";
+
         public DateTime? ClosedAt { get; set; }
         public string? ClosedByUserId { get; set; }
 

@@ -153,5 +153,81 @@ namespace ExpenseTracker.UnitTests
 
             shares[Member(1)].Should().Be(33.33m);
         }
+
+        [Fact]
+        public void Split_remainder_divides_the_shortfall_over_the_custom_participants()
+        {
+            // 100 total, customs of 30 and 24 leave 46; each takes 23 on top of their custom.
+            var transaction = Transaction(100m, (Member(1), 30m), (Member(2), 24m));
+            transaction.SplitRemainder = true;
+
+            var shares = transaction.CalculateShares();
+
+            shares[Member(1)].Should().Be(53m);
+            shares[Member(2)].Should().Be(47m);
+            shares.Values.Sum().Should().Be(100m);
+        }
+
+        [Fact]
+        public void Split_remainder_keeps_the_custom_amounts_as_entered()
+        {
+            var transaction = Transaction(100m, (Member(1), 30m), (Member(2), 24m));
+            transaction.SplitRemainder = true;
+
+            transaction.CalculateShares();
+
+            transaction.Participants.Select(p => p.CustomShareAmount)
+                .Should().BeEquivalentTo(new decimal?[] { 30m, 24m });
+        }
+
+        [Theory]
+        [InlineData(100.00, 30.00, 24.00)]
+        [InlineData(10.01, 1.00, 2.00)]
+        [InlineData(0.05, 0.01, 0.01)]
+        [InlineData(999.99, 100.00, 0.01)]
+        public void Split_remainder_always_conserves_the_total(
+            decimal amount, decimal first, decimal second)
+        {
+            var transaction = Transaction(amount, (Member(1), first), (Member(2), second));
+            transaction.SplitRemainder = true;
+
+            transaction.CalculateShares().Values.Sum().Should().Be(amount);
+        }
+
+        [Fact]
+        public void Split_remainder_odd_cent_lands_on_the_first_member_by_id()
+        {
+            // 10.01 − (1 + 2) = 7.01 over two: 3.50 each with an odd cent for the lowest member id.
+            var transaction = Transaction(10.01m, (Member(9), 1m), (Member(2), 2m));
+            transaction.SplitRemainder = true;
+
+            var shares = transaction.CalculateShares();
+
+            shares[Member(2)].Should().Be(5.51m);
+            shares[Member(9)].Should().Be(4.50m);
+        }
+
+        [Fact]
+        public void Split_remainder_with_nothing_left_over_is_just_the_custom_shares()
+        {
+            var transaction = Transaction(100m, (Member(1), 60m), (Member(2), 40m));
+            transaction.SplitRemainder = true;
+
+            var shares = transaction.CalculateShares();
+
+            shares[Member(1)].Should().Be(60m);
+            shares[Member(2)].Should().Be(40m);
+        }
+
+        [Fact]
+        public void Without_the_flag_a_short_custom_split_still_lands_on_the_first_member()
+        {
+            // Legacy conservation: the validator rejects this, but stored rows must still balance.
+            var shares = Transaction(100m, (Member(1), 30m), (Member(2), 24m)).CalculateShares();
+
+            shares[Member(1)].Should().Be(76m);
+            shares[Member(2)].Should().Be(24m);
+            shares.Values.Sum().Should().Be(100m);
+        }
     }
 }

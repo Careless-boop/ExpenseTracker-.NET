@@ -57,7 +57,8 @@ namespace ExpenseTracker.API.Controllers
                 request.Type,
                 request.PaidByMemberId,
                 request.CategoryId,
-                request.Participants));
+                request.Participants,
+                request.SplitRemainder));
 
             return CreatedAtAction(nameof(GetTransaction), new { expenseListId, id }, new { id });
         }
@@ -79,7 +80,8 @@ namespace ExpenseTracker.API.Controllers
                 request.Type,
                 request.PaidByMemberId,
                 request.CategoryId,
-                request.Participants));
+                request.Participants,
+                request.SplitRemainder));
 
             return NoContent();
         }
@@ -99,7 +101,8 @@ namespace ExpenseTracker.API.Controllers
         TransactionType Type,
         Guid PaidByMemberId,
         Guid? CategoryId,
-        IReadOnlyList<ParticipantInput>? Participants
+        IReadOnlyList<ParticipantInput>? Participants,
+        bool SplitRemainder = false
     );
 
     public record UpdateExpenseListTransactionRequest(
@@ -110,6 +113,7 @@ namespace ExpenseTracker.API.Controllers
         TransactionType Type,
         Guid PaidByMemberId,
         Guid? CategoryId,
-        IReadOnlyList<ParticipantInput>? Participants
+        IReadOnlyList<ParticipantInput>? Participants,
+        bool SplitRemainder = false
     );
 }

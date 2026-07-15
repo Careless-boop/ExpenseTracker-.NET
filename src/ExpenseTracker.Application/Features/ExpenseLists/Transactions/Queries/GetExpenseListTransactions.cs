@@ -117,7 +117,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Queries
                     t.Category?.Color,
                     t.CreatedAt,
                     participants,
-                    shares
+                    shares,
+                    t.SplitRemainder
                 );
             }).ToList();
 

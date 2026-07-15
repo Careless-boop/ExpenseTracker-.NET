@@ -23,6 +23,14 @@ namespace ExpenseTracker.Domain.Entities
 
         public ICollection<ExpenseListTransactionParticipant> Participants { get; set; } = new List<ExpenseListTransactionParticipant>();
 
+        /// <summary>
+        /// When every participant has a custom share and those shares fall short of the Amount, the
+        /// shortfall is divided equally between them on top of their custom amounts. Without this the
+        /// split is rejected. The custom amounts stay stored as entered, so the original intent
+        /// ("Viktor 30, Sonya 24, split the other 46") survives a round-trip.
+        /// </summary>
+        public bool SplitRemainder { get; set; }
+
         public bool HasSplit => Participants.Count > 0;
 
         /// <summary>
@@ -50,11 +58,27 @@ namespace ExpenseTracker.Domain.Entities
                 foreach (var p in customParticipants)
                     shares[p.MemberId] = p.CustomShareAmount!.Value;
 
+                var residual = Amount - customParticipants.Sum(p => p.CustomShareAmount!.Value);
+
+                if (SplitRemainder && residual > 0)
+                {
+                    // The shortfall is shared equally on top of the custom amounts.
+                    var extra = Math.Round(residual / customParticipants.Count, 2, MidpointRounding.ToNegativeInfinity);
+                    var odd = residual - extra * customParticipants.Count;
+
+                    var isFirstCustom = true;
+                    foreach (var p in customParticipants)
+                    {
+                        shares[p.MemberId] += isFirstCustom ? extra + odd : extra;
+                        isFirstCustom = false;
+                    }
+                }
                 // Validators reject custom shares that don't sum to Amount, but rows predating them
                 // may. Balances must still conserve, so any residual lands on the first participant.
-                var residual = Amount - customParticipants.Sum(p => p.CustomShareAmount!.Value);
-                if (residual != 0)
+                else if (residual != 0)
+                {
                     shares[customParticipants[0].MemberId] += residual;
+                }
             }
             else if (customParticipants.Count == 0)
             {

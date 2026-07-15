@@ -21,7 +21,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
         TransactionType Type,
         Guid PaidByMemberId,
         Guid? CategoryId,
-        IReadOnlyList<ParticipantInput>? Participants
+        IReadOnlyList<ParticipantInput>? Participants,
+        bool SplitRemainder = false
     ) : IRequest<Guid>;
 
     public record ParticipantInput(Guid MemberId, decimal? CustomShareAmount);
@@ -48,8 +49,13 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
                 .Must(p => p == null || p.Select(x => x.MemberId).Distinct().Count() == p.Count)
                 .WithMessage("A member cannot appear twice in the same split.");
             RuleFor(x => x.Participants)
-                .Must((cmd, participants) => ParticipantSplitRules.SharesReconcile(participants, cmd.Amount))
+                .Must((cmd, participants) =>
+                    ParticipantSplitRules.SharesReconcile(participants, cmd.Amount, cmd.SplitRemainder))
                 .WithMessage(ParticipantSplitRules.Message);
+            RuleFor(x => x.SplitRemainder)
+                .Must((cmd, splitRemainder) =>
+                    ParticipantSplitRules.SplitRemainderIsApplicable(cmd.Participants, splitRemainder))
+                .WithMessage(ParticipantSplitRules.SplitRemainderMessage);
         }
     }
 
@@ -125,7 +131,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
                 Description = request.Description,
                 Date = request.Date,
                 Type = request.Type,
-                CategoryId = categoryId
+                CategoryId = categoryId,
+                SplitRemainder = request.SplitRemainder
             };
 
             if (request.Participants != null && request.Participants.Count > 0)

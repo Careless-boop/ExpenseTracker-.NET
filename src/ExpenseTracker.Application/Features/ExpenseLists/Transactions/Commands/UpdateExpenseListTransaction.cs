@@ -21,7 +21,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
         TransactionType Type,
         Guid PaidByMemberId,
         Guid? CategoryId,
-        IReadOnlyList<ParticipantInput>? Participants
+        IReadOnlyList<ParticipantInput>? Participants,
+        bool SplitRemainder = false
     ) : IRequest;
 
     public class UpdateExpenseListTransactionCommandValidator
@@ -46,8 +47,13 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
                 .Must(p => p == null || p.Select(x => x.MemberId).Distinct().Count() == p.Count)
                 .WithMessage("A member cannot appear twice in the same split.");
             RuleFor(x => x.Participants)
-                .Must((cmd, participants) => ParticipantSplitRules.SharesReconcile(participants, cmd.Amount))
+                .Must((cmd, participants) =>
+                    ParticipantSplitRules.SharesReconcile(participants, cmd.Amount, cmd.SplitRemainder))
                 .WithMessage(ParticipantSplitRules.Message);
+            RuleFor(x => x.SplitRemainder)
+                .Must((cmd, splitRemainder) =>
+                    ParticipantSplitRules.SplitRemainderIsApplicable(cmd.Participants, splitRemainder))
+                .WithMessage(ParticipantSplitRules.SplitRemainderMessage);
         }
     }
 
@@ -115,41 +121,51 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Commands
             transaction.Type = request.Type;
             transaction.PaidByMemberId = request.PaidByMemberId;
             transaction.CategoryId = request.CategoryId;
+            transaction.SplitRemainder = request.SplitRemainder;
 
-            // Replace participants
-            foreach (var participant in transaction.Participants.ToList())
-                _context.ExpenseListTransactionParticipants.Remove(participant);
-
-            if (request.Participants != null && request.Participants.Count > 0)
+            if (request.Participants is { Count: > 0 })
             {
-                var participantMemberIds = request.Participants.Select(p => p.MemberId).ToList();
-                var invalidIds = participantMemberIds.Except(listMemberIds).ToList();
+                var invalidIds = request.Participants.Select(p => p.MemberId)
+                    .Except(listMemberIds).ToList();
                 if (invalidIds.Count > 0)
                     throw new ValidationException([new ValidationFailure(
                         nameof(request.Participants),
                         "One or more participants are not members of this expense list")]);
-
-                foreach (var p in request.Participants)
-                {
-                    transaction.Participants.Add(new ExpenseListTransactionParticipant
-                    {
-                        Id = Guid.NewGuid(),
-                        TransactionId = transaction.Id,
-                        MemberId = p.MemberId,
-                        CustomShareAmount = p.CustomShareAmount
-                    });
-                }
             }
-            else
+
+            var desired = request.Participants is { Count: > 0 }
+                ? request.Participants.ToDictionary(p => p.MemberId, p => p.CustomShareAmount)
+                // Default: all members participate equally.
+                : listMemberIds.ToDictionary(id => id, _ => (decimal?)null);
+
+            // Reconcile in place rather than delete-all + re-add. Participants are soft-deleted,
+            // so re-inserting the same (TransactionId, MemberId) keeps the old rows on the unique
+            // index — EF can't order that batch (circular dependency) and it would violate the
+            // index. Updating the ones that stay and only removing those now absent avoids both.
+            foreach (var participant in transaction.Participants
+                         .Where(p => !desired.ContainsKey(p.MemberId)).ToList())
             {
-                foreach (var memberId in listMemberIds)
+                _context.ExpenseListTransactionParticipants.Remove(participant);
+            }
+
+            foreach (var (memberId, customShare) in desired)
+            {
+                var current = transaction.Participants.FirstOrDefault(p => p.MemberId == memberId);
+                if (current != null)
                 {
-                    transaction.Participants.Add(new ExpenseListTransactionParticipant
+                    current.CustomShareAmount = customShare;
+                }
+                else
+                {
+                    // Add through the DbSet, not transaction.Participants: the Id is store-generated,
+                    // so adding a pre-keyed child to an already-tracked parent makes EF treat it as
+                    // an existing row (Modified) and emit an UPDATE that matches nothing.
+                    _context.ExpenseListTransactionParticipants.Add(new ExpenseListTransactionParticipant
                     {
                         Id = Guid.NewGuid(),
                         TransactionId = transaction.Id,
                         MemberId = memberId,
-                        CustomShareAmount = null
+                        CustomShareAmount = customShare
                     });
                 }
             }

@@ -1,16 +1,20 @@
-﻿using ExpenseTracker.Application.Common.Interfaces;
+﻿using ExpenseTracker.Application.Common;
+using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Domain.Enums;
 using ExpenseTracker.Domain.Interfaces;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
 {
     public record CreateExpenseListCommand(
         string Name,
         string? Description = null,
-        string? CoverImage = null
+        string? CoverImage = null,
+        // Null falls back to the creator's currency setting.
+        string? Currency = null
     ) : IRequest<Guid>;
 
     public class CreateExpenseListCommandValidator : AbstractValidator<CreateExpenseListCommand>
@@ -26,6 +30,11 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
 
             RuleFor(x => x.CoverImage)
                 .MaximumLength(500).When(x => x.CoverImage != null);
+
+            RuleFor(x => x.Currency)
+                .Must(SupportedCurrencies.IsSupported)
+                .When(x => x.Currency != null)
+                .WithMessage("Unsupported currency.");
         }
     }
 
@@ -55,12 +64,20 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
             var currentUserId = _currentUser.UserId!;
             var user = await _identityService.GetUserAsync(currentUserId);
 
+            var currency = request.Currency
+                ?? await _context.UserSettings
+                    .Where(s => s.UserId == currentUserId)
+                    .Select(s => s.Currency)
+                    .FirstOrDefaultAsync(cancellationToken)
+                ?? SupportedCurrencies.Default;
+
             var expenseList = new ExpenseList
             {
                 Id = Guid.NewGuid(),
                 Name = request.Name,
                 Description = request.Description,
-                CoverImage = request.CoverImage
+                CoverImage = request.CoverImage,
+                Currency = SupportedCurrencies.Normalize(currency)
             };
 
             expenseList.Members.Add(new ExpenseListMember

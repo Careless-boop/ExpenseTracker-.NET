@@ -17,7 +17,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions
         string? CategoryColor,
         DateTime CreatedAt,
         IReadOnlyList<ExpenseListParticipantDto> Participants,
-        IReadOnlyDictionary<Guid, decimal> CalculatedShares
+        IReadOnlyDictionary<Guid, decimal> CalculatedShares,
+        bool SplitRemainder
     );
 
     public record ExpenseListParticipantDto(

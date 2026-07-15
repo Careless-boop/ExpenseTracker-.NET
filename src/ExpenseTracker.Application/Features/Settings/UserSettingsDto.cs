@@ -1,4 +1,4 @@
 namespace ExpenseTracker.Application.Features.Settings
 {
-    public record UserSettingsDto(bool SyncClosedListsToPersonal);
+    public record UserSettingsDto(bool SyncClosedListsToPersonal, string Currency);
 }

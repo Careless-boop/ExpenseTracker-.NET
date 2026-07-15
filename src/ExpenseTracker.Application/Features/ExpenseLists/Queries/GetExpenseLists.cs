@@ -32,6 +32,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Queries
                     m.ExpenseList.Name,
                     m.ExpenseList.Description,
                     m.ExpenseList.CoverImage,
+                    m.ExpenseList.Currency,
                     m.ExpenseList.Members.Count,
                     m.ExpenseList.Transactions.Count,
                     m.Role,

@@ -27,7 +27,11 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(p => p.TransactionId);
             builder.HasIndex(p => p.MemberId);
-            builder.HasIndex(p => new { p.TransactionId, p.MemberId }).IsUnique();
+            // Uniqueness applies to active participants only; a soft-deleted row must not block
+            // re-adding the same member to a split in a later edit.
+            builder.HasIndex(p => new { p.TransactionId, p.MemberId })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
         }
     }
 }

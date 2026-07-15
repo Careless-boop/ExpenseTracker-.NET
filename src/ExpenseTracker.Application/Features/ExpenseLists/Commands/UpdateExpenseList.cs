@@ -1,4 +1,5 @@
-﻿using ExpenseTracker.Application.Common.Exceptions;
+﻿using ExpenseTracker.Application.Common;
+using ExpenseTracker.Application.Common.Exceptions;
 using ExpenseTracker.Application.Common.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Domain.Enums;
@@ -13,7 +14,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
         Guid Id,
         string Name,
         string? Description,
-        string? CoverImage
+        string? CoverImage,
+        string Currency = "USD"
     ) : IRequest;
 
     public class UpdateExpenseListCommandValidator : AbstractValidator<UpdateExpenseListCommand>
@@ -31,6 +33,10 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
 
             RuleFor(x => x.CoverImage)
                 .MaximumLength(500).When(x => x.CoverImage != null);
+
+            RuleFor(x => x.Currency)
+                .Must(SupportedCurrencies.IsSupported)
+                .WithMessage("Unsupported currency.");
         }
     }
 
@@ -72,6 +78,7 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Commands
             expenseList.Name = request.Name;
             expenseList.Description = request.Description;
             expenseList.CoverImage = request.CoverImage;
+            expenseList.Currency = SupportedCurrencies.Normalize(request.Currency);
 
             await _context.SaveChangesAsync(cancellationToken);
         }

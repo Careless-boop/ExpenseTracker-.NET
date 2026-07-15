@@ -72,7 +72,8 @@ namespace ExpenseTracker.Application.Features.ExpenseLists.Transactions.Queries
                 transaction.Category?.Color,
                 transaction.CreatedAt,
                 participants,
-                shares
+                shares,
+                transaction.SplitRemainder
             );
         }
     }

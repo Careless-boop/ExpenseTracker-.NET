@@ -20,6 +20,11 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations
             builder.Property(e => e.CoverImage)
                 .HasMaxLength(500);
 
+            builder.Property(e => e.Currency)
+                .HasMaxLength(3)
+                .HasDefaultValue("USD")
+                .IsRequired();
+
             builder.HasQueryFilter(e => !e.IsDeleted);
         }
     }

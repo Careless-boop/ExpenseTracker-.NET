@@ -24,18 +24,26 @@ namespace ExpenseTracker.UnitTests
             _connection = new SqliteConnection("DataSource=:memory:");
             _connection.Open();
 
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseSqlite(_connection)
-                .Options;
-
             CurrentUser = Substitute.For<ICurrentUserService>();
             CurrentUser.UserId.Returns(userId);
             CurrentUser.IsAuthenticated.Returns(true);
 
-            var interceptor = new AuditableEntityInterceptor(CurrentUser, TimeProvider.System);
-
-            Context = new ApplicationDbContext(options, interceptor);
+            Context = NewContext();
             Context.Database.EnsureCreated();
+        }
+
+        /// <summary>
+        /// A fresh context over the same in-memory database, for tests that mimic the app's
+        /// per-request scoping — a new context tracks nothing left over from a prior operation.
+        /// </summary>
+        public ApplicationDbContext NewContext()
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(_connection)
+                .Options;
+
+            var interceptor = new AuditableEntityInterceptor(CurrentUser, TimeProvider.System);
+            return new ApplicationDbContext(options, interceptor);
         }
 
         public void SignInAs(string userId) => CurrentUser.UserId.Returns(userId);
